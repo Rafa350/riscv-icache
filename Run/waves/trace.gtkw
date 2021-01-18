@@ -1,0 +1,85 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Sun Jan 17 14:49:52 2021
+[*]
+[dumpfile] "C:\Users\Rafael\Documents\Projectes\FPGA\ICACHE\Run\waves\trace.fst"
+[dumpfile_mtime] "Sun Jan 17 14:21:36 2021"
+[dumpfile_size] 14439
+[savefile] "C:\Users\Rafael\Documents\Projectes\FPGA\ICACHE\Run\waves\trace.gtkw"
+[timestart] 1224
+[size] 1920 1017
+[pos] -1 -1
+*-4.000000 175 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.top.
+[treeopen] TOP.top.icache.
+[sst_width] 211
+[signals_width] 262
+[sst_expanded] 1
+[sst_vpaned_height] 638
+@200
+-System
+@28
+TOP.top.i_reset
+TOP.top.i_clock
+@200
+-
+-Top
+@28
+TOP.top.read
+@22
+TOP.top.i_addr[31:0]
+TOP.top.o_inst[31:0]
+@200
+-
+-ICache
+@100000028
+TOP.top.icache.state[1:0]
+@22
+TOP.top.icache.count[11:0]
+@28
+TOP.top.icache.hit
+@22
+TOP.top.icache.o_inst[31:0]
+@28
+TOP.top.icache.o_busy
+@200
+-
+-Cache Set 0
+@28
+TOP.top.icache.cacheSet0.i_addr[11:0]
+@22
+TOP.top.icache.cacheSet0.i_inst[31:0]
+@28
+TOP.top.icache.cacheSet0.i_cl
+TOP.top.icache.cacheSet0.i_wr
+@22
+TOP.top.icache.cacheSet0.o_inst[31:0]
+@28
+TOP.top.icache.cacheSet0.block[1:0]
+@22
+TOP.top.icache.cacheSet0.index[6:0]
+@28
+TOP.top.icache.cacheSet0.tag[2:0]
+TOP.top.icache.cacheSet0.o_hit
+@200
+-
+-Cache Set 1
+@22
+TOP.top.icache.cacheSet1.i_addr[11:0]
+TOP.top.icache.cacheSet1.i_inst[31:0]
+@28
+TOP.top.icache.cacheSet1.i_cl
+TOP.top.icache.cacheSet1.i_wr
+@22
+TOP.top.icache.cacheSet1.o_inst[31:0]
+@28
+TOP.top.icache.cacheSet1.block[1:0]
+@22
+TOP.top.icache.cacheSet1.index[6:0]
+@29
+TOP.top.icache.cacheSet1.tag[2:0]
+@28
+TOP.top.icache.cacheSet1.o_hit
+[pattern_trace] 1
+[pattern_trace] 0

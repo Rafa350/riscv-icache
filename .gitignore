@@ -1,0 +1,17 @@
+/Quartus/db
+/Quartus/incremental_db
+/Quartus/output_files
+/Quartus/simulation
+/Quartus/dse
+/Quartus/greybox_tmp
+/Verilator/build
+/Yosys/build
+/Firmware/build
+/Simulator/build
+/build
+*.o
+*.out
+*.exe
+*.fst
+*.qws
+.vscode
