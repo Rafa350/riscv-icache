@@ -2,144 +2,121 @@ module ICache
     import Types::*;
 #(
     parameter CACHE_BLOCKS   = 4,
-    parameter CACHE_ELEMENTS = 128)
+    parameter CACHE_ELEMENTS = 32)
 (
-    input logic    i_clock,
-    input logic    i_reset,
+    input  logic    i_clock,
+    input  logic    i_reset,
 
-    input InstAddr i_addr,
-    input logic    i_rd,
-    output Inst    o_inst,
-    output logic   o_busy);
+    input  InstAddr i_addr,
+    input  logic    i_rd,
+    output Inst     o_inst,
+    output logic    o_busy,
+
+    output InstAddr o_mem_addr,
+    input  Inst     i_mem_data);
+
 
     typedef enum logic [1:0] {
         State_INIT,
         State_IDLE,
-        State_READ,
-        State_CACHE
+        State_ALLOC
     } State;
 
 
-    InstAddr     addr;
-    Inst         inst;
-    logic        cl;
-    logic        wr;
-    logic [11:0] count, nextCount;  // Contador per inicialitzacio
-    State        state, nextState;  // Estat intern
-    logic        hit;
+    InstAddr                   addr;           // Adressa
+    Inst                       inst;           // Dades
+    logic                      cl;             // Autoritzacio de borrat
+    logic                      wr;             // Autoritzacio d' escriptura
+    logic [CACHE_ELEMENTS-3:0] initCount,      // Contador per inicialitzacio
+                               nextInitCount;
+    logic [CACHE_BLOCKS-1:0]   allocCount,     // Contador per asignacio
+                               nextAllocCount;
+    InstAddr                   allocAddr,      // Adressa per assignacio
+                               nextAllocAddr;
+    State                      state,          // Estat
+                               nextState;
 
 
     // -------------------------------------------------------------------
-    // Set 0
+    // Set
     // -------------------------------------------------------------------
 
-    logic cacheSet0_hit;
-    Inst  cacheSet0_inst;
+    logic cacheSet_hit;
+    Inst  cacheSet_data;
 
-    ICacheSet #(
-        .CACHE_BLOCKS   (CACHE_BLOCKS),
+    CacheSet #(
+        .DATA_WIDTH     ($size(Inst)),
+        .ADDR_WIDTH     ($size(InstAddr)),
         .CACHE_ELEMENTS (CACHE_ELEMENTS))
-    cacheSet0 (
+    cacheSet (
         .i_clock (i_clock),
         .i_reset (i_reset),
         .i_addr  (addr),
-        .i_wr    (0),
+        .i_wr    (wr),
         .i_cl    (cl),
-        .i_inst  (0),
-        .o_inst  (cacheSet0_inst),
-        .o_hit   (cacheSet0_hit));
-
-
-    // -------------------------------------------------------------------
-    // Set 1
-    // -------------------------------------------------------------------
-
-    logic cacheSet1_hit;
-    Inst  cacheSet1_inst;
-
-    ICacheSet #(
-        .CACHE_BLOCKS   (CACHE_BLOCKS),
-        .CACHE_ELEMENTS (CACHE_ELEMENTS))
-    cacheSet1 (
-        .i_clock (i_clock),
-        .i_reset (i_reset),
-        .i_addr  (addr),
-        .i_wr    (0),
-        .i_cl    (cl),
-        .i_inst  (0),
-        .o_inst  (cacheSet1_inst),
-        .o_hit   (cacheSet1_hit));
-
-
-    // -------------------------------------------------------------------
-    // Obte la instruccio del cache, si existeix
-    // -------------------------------------------------------------------
-
-    always_comb
-        unique casez ({cacheSet1_hit, cacheSet0_hit})
-            2'b00: begin
-                hit = 1'b0;
-                inst = Inst'(0);
-            end
-
-            2'b1?: begin
-                hit = 1'b1;
-                inst = cacheSet1_inst;
-            end
-
-            2'b01: begin
-                hit = 1'b1;
-                inst = cacheSet0_inst;
-            end
-        endcase
+        .i_data  (i_mem_data),
+        .o_data  (cacheSet_data),
+        .o_hit   (cacheSet_hit));
 
 
     // -------------------------------------------------------------------
     // FSM de control de les operacions del cache
     // -------------------------------------------------------------------
 
-    // Evalua el nou estat
-    //
     always_comb begin
-        o_busy = 1'b1;
+
         cl = 1'b0;
         wr = 1'b0;
         addr = i_addr;
-        nextCount = 0;
+        nextInitCount = 0;
+        nextAllocCount = 0;
+        nextAllocAddr = {i_addr[$size(InstAddr)-1:2], 2'b00};
+        nextState = state;
+
         unique case (state)
             State_INIT:
                 begin
-                    cl = 1'b1;
-                    addr = InstAddr'({count, 2'b00});
-                    nextCount = count + 1;
-                    nextState = (count == (CACHE_ELEMENTS)) ? State_IDLE : state;
+                    cl            = 1'b1;
+                    addr          = InstAddr'({initCount, 2'b00});
+                    nextInitCount = initCount + 1;
+                    nextState     = (initCount == CACHE_ELEMENTS-1) ? State_IDLE : state;
                 end
 
             State_IDLE:
-                if (hit) begin
-                    o_inst = inst;
-                    o_busy = 1'b1;
-                    nextState = state;
+                nextState = cacheSet_hit ? state : State_ALLOC;
+
+            State_ALLOC:
+                begin
+                    wr             = 1'b1;
+                    addr           = allocAddr;
+                    o_mem_addr     = allocAddr;
+                    nextAllocCount = allocCount + 1;
+                    nextAllocAddr  = allocAddr + 1;
+                    nextState      = (allocCount == CACHE_BLOCKS-1) ? State_IDLE : state;
                 end
-                else
-                    nextState = State_READ;
 
-            State_READ:
-                nextState = State_IDLE;
-
-            State_CACHE:
-                nextState = State_IDLE;
-
-            default:
-                nextState = state;
+            default: ;
         endcase
     end
 
-    // Actualitzacio del contador
+    // Asignacioo de les sortides
+    //
+    assign o_busy = cacheSet_hit & (state == State_IDLE);
+    assign o_inst = cacheSet_data;
+
+    // Actualitzacio dels contadors
     //
     always_ff @(posedge i_clock)
-        if (~i_reset & (state == State_INIT))
-            count <= nextCount;
+        if (i_reset) begin
+            initCount <= 0;
+            allocCount <= 0;
+            allocAddr <= 0;
+        end
+        else begin
+            initCount <= nextInitCount;
+            allocCount <= nextAllocCount;
+            allocAddr <= nextAllocAddr;
+        end
 
     // Actualitzacio del estat
     //
@@ -148,6 +125,5 @@ module ICache
             state <= State_INIT;
         else
             state <= nextState;
-
 
 endmodule

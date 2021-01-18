@@ -51,7 +51,7 @@ void CPUTestbench::run() {
     top->i_clock = 0;
     top->i_reset = 0;
 
-    int pc = 0x00008000;
+    int pc = 0;
 
     openTrace(traceFileName);
 
@@ -75,9 +75,11 @@ void CPUTestbench::run() {
         else if (tick == CLOCK_RST_SET)
             top->i_reset = 1;
 
-        if ((tick % 20) == 0) {
+        if ((tick % 20) == 5) {
             top->i_addr = pc;
-            pc += 0x00000105;
+            pc += 4;
+            if (pc > 32)
+                pc = 0;
         }
 
 
