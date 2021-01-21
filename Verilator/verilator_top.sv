@@ -7,13 +7,15 @@ module top
     import Types::*;
 (
     input  logic i_clock,  // Clock
-    input  logic i_reset,  // Reset
+    input  logic i_reset); // Reset
 
-    input  [31:0] i_addr,
-    output [31:0] o_inst);
+    int tickCount;
 
-    logic    read = 1'b1;
+    InstAddr addr;
+    Inst     inst;
+    logic    read;
     logic    busy;
+    logic    hit;
 
 
     InstAddr imem_addr;
@@ -34,11 +36,47 @@ module top
     icache (
         .i_clock    (i_clock),
         .i_reset    (i_reset),
-        .i_addr     (i_addr[11:0]),
+        .i_addr     (addr),
         .i_rd       (read),
-        .o_inst     (o_inst),
+        .o_inst     (inst),
         .o_busy     (busy),
+        .o_hit      (hit),
         .o_mem_addr (imem_addr),
         .i_mem_data (imem_data));
+
+
+    initial begin
+        tickCount = 0;
+        read = 1'b0;
+    end
+
+    always_comb begin
+        if (tickCount > 500)
+            $finish;
+
+        read = 1'b0;
+        addr = InstAddr'(0);
+
+        if (tickCount == 40) begin
+            addr = InstAddr'(12'h010);
+            read = 1'b1;
+        end
+
+        if (tickCount == 50) begin
+            addr = InstAddr'(12'h010);
+            read = 1'b1;
+        end
+
+        if (tickCount == 60) begin
+            addr = InstAddr'(12'h012);
+            read = 1'b1;
+        end
+    end
+
+    always_ff @(posedge i_clock)
+        if (i_reset)
+            tickCount <= 0;
+        else
+            tickCount <= tickCount + 1;
 
 endmodule

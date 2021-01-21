@@ -16,8 +16,6 @@
 #define CLOCK_RST_SET           0  // Tic per iniciar el reset
 #define CLOCK_RST_CLR           7  // Tic per acabar el reset
 
-#define CLOCK_WRENABLE         20  // Tic per escriure en el registre de sortida
-
 
 using namespace Simulation;
 
@@ -51,8 +49,6 @@ void CPUTestbench::run() {
     top->i_clock = 0;
     top->i_reset = 0;
 
-    int pc = 0;
-
     openTrace(traceFileName);
 
     unsigned tick;
@@ -74,14 +70,6 @@ void CPUTestbench::run() {
             top->i_reset = 0;
         else if (tick == CLOCK_RST_SET)
             top->i_reset = 1;
-
-        if ((tick % 20) == 5) {
-            top->i_addr = pc;
-            pc += 4;
-            if (pc > 32)
-                pc = 0;
-        }
-
 
     } while (nextTick() && (tick < CLOCK_MAX));
 

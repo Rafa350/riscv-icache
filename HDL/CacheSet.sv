@@ -1,48 +1,73 @@
 // -----------------------------------------------------------------------
 //
-//       Via de cache
+//       Cache de lectura
 //
 //       Parametres:
-//            DATA_WIDTH : Amplada en bits de les dades
-//            ADDR_WIDTH : Amplada en bits de les d'adresses
-//            SIZE       : Nombre d'entrades en el cache
+//            DATA_WIDTH  : Amplada en bits de les dades
+//            TAG_WIDTH   : Amplada en bits del tag
+//            INDEX_WIDTH : Amplada en bits de les d'adresses
 //
 //       Entrada:
 //            i_clock   : Senyal de rellotge
 //            i_reset   : Senyal de reset
-//            i_addr    : Adressa
+//            i_index   : Adressa
 //            i_write   : Habilita l'excriptura
 //            l_clear   : Habilita la neteja
-//            i_data    : Dades per escriure
+//            i_tag     : Tag
+//            i_data    : Dades
 //
 //       Sortides:
-//            o_data    : Dades de lectura
+//            o_data    : Dades
 //            o_hit     : Coincidencia
 //
 // -----------------------------------------------------------------------
 
 module CacheSet
 #(
-    parameter DATA_WIDTH  = 32,
-    parameter ADDR_WIDTH  = 32,
-    parameter SIZE        = 128)
+    parameter DATA_WIDTH  = 32, // Amplada de dades en bits
+    parameter TAG_WIDTH   = 10, // Amplada del tag en bits
+    parameter INDEX_WIDTH = 6)  // AMplada del index en bits
 (
-    input  logic                  i_clock, // Clock
-    input  logic                  i_reset, // Reset
-    input  logic [ADDR_WIDTH-1:0] i_addr,  // Adressa
-    input  logic                  i_wr,    // Habilita escriptura
-    input  logic                  i_cl,    // Habiliaa invalidacio
-    input  logic [DATA_WIDTH-1:0] i_data,  // Dades per escriure
-    output logic [DATA_WIDTH-1:0] o_data,  // Dades lleigides
-    output logic                  o_hit);  // Indica coincidencia i dades recuperades
+    input  logic                   i_clock, // Clock
+    input  logic                   i_reset, // Reset
+    input  logic [INDEX_WIDTH-1:0] i_index, // Index
+    input  logic                   i_wr,    // Habilita escriptura
+    input  logic                   i_cl,    // Habilita invalidacio
+    input  logic [TAG_WIDTH-1:0]   i_tag,   // Tag
+    input  logic [DATA_WIDTH-1:0]  i_data,  // Dades
+    output logic [DATA_WIDTH-1:0]  o_data,  // Dades
+    output logic                   o_hit);  // Indica coincidencia i dades recuperades
 
 
-    localparam INDEX_WIDTH = $clog2(SIZE);
-    localparam TAG_WIDTH   = ADDR_WIDTH-INDEX_WIDTH;
+    typedef logic [TAG_WIDTH-1:0]  Tag;       // Tag
+    typedef logic [DATA_WIDTH-1:0] CacheData; // Dades
+
+    typedef struct packed { // Metadades
+        logic valid;        // -Indicador d'entrada valida
+        Tag   tag;          // -Tag de la entrada
+    } CacheMeta;
 
 
-    logic [INDEX_WIDTH-1:0] index = i_addr[INDEX_WIDTH-1:0];
-    logic [TAG_WIDTH-1:0]   tag   = i_addr[TAG_WIDTH+INDEX_WIDTH-1:INDEX_WIDTH];
+    CacheData mem_rdData;  // Dades per escriure en memoria de dades
+    CacheData mem_wrData;  // Dades lleigides de la memoria de dades
+    logic     mem_wr;      // Habilita escriptura en la memoria de dades
+    CacheMeta meta_rdData; // Dades per escriure en la memoria de metadades
+    CacheMeta meta_wrData; // Dades lleigides en la m,emoria de metadades
+    logic     meta_wr;     // Habilita la escriptura en la memoria de metadades
+
+
+    // Control de la memoria de dades
+    //
+    assign mem_wr     = i_wr & ~i_cl;
+    assign mem_wrData = i_data;
+    assign o_data     = mem_rdData;
+
+    // Control de la memoria de metadades
+    //
+    assign meta_wr           = i_wr | i_cl;
+    assign meta_wrData.valid = i_cl ? 1'b0 : 1'b1;
+    assign meta_wrData.tag   = i_cl ? Tag'(0) : i_tag;
+    assign o_hit             = (meta_rdData.tag == i_tag) & meta_rdData.valid & ~i_reset & ~i_cl & ~i_wr;
 
 
     // -------------------------------------------------------------------
@@ -50,49 +75,29 @@ module CacheSet
     // -------------------------------------------------------------------
 
     CacheMem #(
-        .DATA_WIDTH (DATA_WIDTH),
+        .DATA_WIDTH ($size(CacheData)),
         .ADDR_WIDTH (INDEX_WIDTH))
     dataMem (
         .i_clock (i_clock),
-        .i_wr    (i_wr & ~i_cl),
-        .i_addr  (index),
-        .i_data  (i_data),
-        .o_data  (o_data));
+        .i_wr    (mem_wr),
+        .i_addr  (i_index),
+        .i_data  (mem_wrData),
+        .o_data  (mem_rdData));
 
 
-    // -------------------------------------------------------------------
-    // Memoria de tags
-    // -------------------------------------------------------------------
-
-    logic [TAG_WIDTH-1:0] tagMem_tag;
+    // ------------------------------------------------------------------
+    // Memoria de metadades
+    // ------------------------------------------------------------------
 
     CacheMem #(
-        .DATA_WIDTH (TAG_WIDTH),
+        .DATA_WIDTH ($size(CacheMeta)),
         .ADDR_WIDTH (INDEX_WIDTH))
-    tagMem (
+    metaMem (
         .i_clock (i_clock),
-        .i_wr    (i_wr & ~i_cl),
-        .i_addr   (index),
-        .i_data  (tag),
-        .o_data  (tagMem_tag));
+        .i_wr    (meta_wr),
+        .i_addr  (i_index),
+        .i_data  (meta_wrData),
+        .o_data  (meta_rdData));
 
-
-    // -------------------------------------------------------------------
-    // Memoria de flags
-    // -------------------------------------------------------------------
-
-    logic flagMem_data;
-
-    CacheMem #(
-        .DATA_WIDTH (1),
-        .ADDR_WIDTH (INDEX_WIDTH))
-    flagMem (
-        .i_clock (i_clock),
-        .i_wr    (i_wr | i_cl),
-        .i_addr  (index),
-        .i_data  (i_cl ? 1'b0 : 1'b1),
-        .o_data  (flagMem_data));
-
-    assign o_hit  = (tagMem_tag == tag) & flagMem_data & ~i_reset & ~i_cl & ~i_wr;
 
 endmodule

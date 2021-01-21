@@ -1,35 +1,41 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Mon Jan 18 19:39:10 2021
+[*] Thu Jan 21 13:14:39 2021
 [*]
 [dumpfile] "C:\Users\Rafael\Documents\Projectes\FPGA\ICACHE\Run\waves\trace.fst"
-[dumpfile_mtime] "Mon Jan 18 16:57:00 2021"
-[dumpfile_size] 2950
+[dumpfile_mtime] "Thu Jan 21 12:56:41 2021"
+[dumpfile_size] 5642
 [savefile] "C:\Users\Rafael\Documents\Projectes\FPGA\ICACHE\Run\waves\trace.gtkw"
-[timestart] 315
+[timestart] 476
 [size] 1920 1017
 [pos] -1 -1
-*-4.000000 347 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-4.000000 455 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top.
 [treeopen] TOP.top.icache.
+[treeopen] TOP.top.icache.cacheSet.
 [sst_width] 276
-[signals_width] 277
+[signals_width] 390
 [sst_expanded] 1
 [sst_vpaned_height] 638
 @200
 -System
 @28
-TOP.top.i_reset
+[color] 1
 TOP.top.i_clock
 @200
 -
 -Top
-@28
-TOP.top.read
+@420
+TOP.top.tickCount
 @22
-TOP.top.i_addr[31:0]
-TOP.top.o_inst[31:0]
+TOP.top.addr[11:0]
+TOP.top.inst[31:0]
+@29
+TOP.top.read
+@28
+TOP.top.hit
+TOP.top.busy
 @200
 -
 -IMem
@@ -39,49 +45,52 @@ TOP.top.imem.o_data[31:0]
 @200
 -
 -ICache
-@100000029
-TOP.top.icache.state[1:0]
 @22
-TOP.top.icache.initCount[29:0]
-TOP.top.icache.allocCount[3:0]
-TOP.top.icache.allocAddr[11:0]
-@28
-TOP.top.icache.hit
-@22
+TOP.top.icache.i_addr[11:0]
 TOP.top.icache.o_inst[31:0]
 @28
 TOP.top.icache.o_busy
+TOP.top.icache.o_hit
+@22
+TOP.top.icache.addr[9:0]
+@28
+TOP.top.icache.tag[2:0]
+TOP.top.icache.index[4:0]
+@22
+TOP.top.icache.data0[31:0]
+TOP.top.icache.data1[31:0]
+TOP.top.icache.data2[31:0]
 @200
 -
 -Cache Set 0
 @22
-TOP.top.icache.cacheSet0.i_addr[11:0]
+TOP.top.icache.cacheSet.i_index[4:0]
 @28
-TOP.top.icache.cacheSet0.i_cl
-TOP.top.icache.cacheSet0.i_wr
-TOP.top.icache.cacheSet0.block[1:0]
-TOP.top.icache.cacheSet0.index[4:0]
-TOP.top.icache.cacheSet0.tag[4:0]
+TOP.top.icache.cacheSet.i_tag[2:0]
 @22
-TOP.top.icache.cacheSet0.i_data[31:0]
-TOP.top.icache.cacheSet0.o_data[31:0]
+TOP.top.icache.cacheSet.i_data[127:0]
 @28
-TOP.top.icache.cacheSet0.o_hit
+TOP.top.icache.cacheSet.i_wr
+TOP.top.icache.cacheSet.i_cl
+@22
+TOP.top.icache.cacheSet.o_data[127:0]
+@28
+TOP.top.icache.cacheSet.o_hit
 @200
 -
--Cache Set 1
-@22
-TOP.top.icache.cacheSet1.i_addr[11:0]
+-Cache Ctrl
 @28
-TOP.top.icache.cacheSet1.i_cl
-TOP.top.icache.cacheSet1.i_wr
-TOP.top.icache.cacheSet1.block[1:0]
-TOP.top.icache.cacheSet1.index[4:0]
-TOP.top.icache.cacheSet1.tag[4:0]
+[color] 1
+TOP.top.icache.cacheCtrl.i_clock
+@100000028
+TOP.top.icache.cacheCtrl.state[1:0]
 @22
-TOP.top.icache.cacheSet1.i_data[31:0]
-TOP.top.icache.cacheSet1.o_data[31:0]
+TOP.top.icache.cacheCtrl.i_index[4:0]
 @28
-TOP.top.icache.cacheSet1.o_hit
+TOP.top.icache.cacheCtrl.o_cl
+TOP.top.icache.cacheCtrl.o_wr
+TOP.top.icache.cacheCtrl.o_hit
+TOP.top.icache.cacheCtrl.o_index[4:0]
+TOP.top.icache.cacheCtrl.o_block[1:0]
 [pattern_trace] 1
 [pattern_trace] 0

@@ -1,129 +1,129 @@
 module ICache
     import Types::*;
 #(
-    parameter CACHE_BLOCKS   = 4,
-    parameter CACHE_ELEMENTS = 32)
+    parameter CACHE_BLOCKS   = 4,   // Tamany del bloc de dades (En words de 32 bits)
+    parameter CACHE_SETS     = 1,   // Nombre de vies
+    parameter CACHE_ELEMENTS = 32)  // Elements en el cache
 (
-    input  logic    i_clock,
-    input  logic    i_reset,
+    input  logic    i_clock,     // Senyal de rellotge
+    input  logic    i_reset,     // Senyal de reset
 
-    input  InstAddr i_addr,
-    input  logic    i_rd,
-    output Inst     o_inst,
-    output logic    o_busy,
+    input  InstAddr i_addr,      // Adressa en bytes de la instruccio (Aliniat a 32 bits)
+    input  logic    i_rd,        // Autoritza lectura
+    output Inst     o_inst,      // Instruccio trobada
+    output logic    o_busy,      // Indica ocupat
+    output logic    o_hit,       // Indica instruccio disponible
 
-    output InstAddr o_mem_addr,
-    input  Inst     i_mem_data);
+    output InstAddr o_mem_addr,  // Adresa de la memoria principal en words
+    input  Inst     i_mem_data); // Dades recuperades de la memoria principal
+
+    localparam CACHE_DATA_WIDTH     = $size(Inst);
+    localparam CACHE_DATALINE_WIDTH = CACHE_DATA_WIDTH * CACHE_BLOCKS;
+    localparam CACHE_ADDR_WIDTH     = $size(InstAddr) - 2;
+    localparam BLOCK_WIDTH          = $clog2(CACHE_BLOCKS);
+    localparam INDEX_WIDTH          = $clog2(CACHE_ELEMENTS);
+    localparam TAG_WIDTH            = CACHE_ADDR_WIDTH - INDEX_WIDTH - BLOCK_WIDTH;
+
+    typedef logic [BLOCK_WIDTH-1:0] Block;
+    typedef logic [INDEX_WIDTH-1:0] Index;
+    typedef logic [TAG_WIDTH-1:0]   Tag;
+
+    logic [CACHE_ADDR_WIDTH-1:0] addr;  // Adresa en words
+    Block                        block; // Bloc de dades
+    Index                        index; // Index del cache
+    Tag                          tag;   // Tag del cache
 
 
-    typedef enum logic [1:0] {
-        State_INIT,
-        State_IDLE,
-        State_ALLOC
-    } State;
+    // Separa els componentds de l'adressa
+    //
+    assign addr  = i_addr[$size(i_addr)-1:2];
+    assign tag   = addr[TAG_WIDTH+INDEX_WIDTH+BLOCK_WIDTH-1:INDEX_WIDTH+BLOCK_WIDTH];
+    assign index = addr[INDEX_WIDTH+BLOCK_WIDTH-1:BLOCK_WIDTH];
+    assign block = addr[BLOCK_WIDTH-1:0];
 
+    // Asignacio de les sortides
+    //
+    assign o_mem_addr = {2'b00, tag, cacheCtrl_index, cacheCtrl_block}; // Adressa de memoria en words
+    assign o_busy = cacheCtrl_busy;
+    assign o_hit  = cacheCtrl_hit & i_rd;
+    
 
-    InstAddr                   addr;           // Adressa
-    Inst                       inst;           // Dades
-    logic                      cl;             // Autoritzacio de borrat
-    logic                      wr;             // Autoritzacio d' escriptura
-    logic [CACHE_ELEMENTS-3:0] initCount,      // Contador per inicialitzacio
-                               nextInitCount;
-    logic [CACHE_BLOCKS-1:0]   allocCount,     // Contador per asignacio
-                               nextAllocCount;
-    InstAddr                   allocAddr,      // Adressa per assignacio
-                               nextAllocAddr;
-    State                      state,          // Estat
-                               nextState;
+    // -------------------------------------------------------------------
+    // Cache controller
+    // -------------------------------------------------------------------
+
+    logic cacheCtrl_cl;
+    logic cacheCtrl_wr;
+    logic cacheCtrl_hit;
+    logic cacheCtrl_busy;
+    Block cacheCtrl_block;
+    Index cacheCtrl_index;
+
+    CacheController #(
+        .INDEX_WIDTH ($size(Index)),
+        .BLOCK_WIDTH ($size(Block)))
+    cacheCtrl (
+        .i_clock (i_clock),
+        .i_reset (i_reset),
+        .i_index (index),
+        .i_hit   (cacheSet_hit),
+        .i_rd    (i_rd),
+        .o_index (cacheCtrl_index),
+        .o_block (cacheCtrl_block),
+        .o_cl    (cacheCtrl_cl),
+        .o_wr    (cacheCtrl_wr),
+        .o_hit   (cacheCtrl_hit),
+        .o_busy  (cacheCtrl_busy));
 
 
     // -------------------------------------------------------------------
-    // Set
+    // Cache sets
     // -------------------------------------------------------------------
 
     logic cacheSet_hit;
-    Inst  cacheSet_data;
+    logic [CACHE_DATALINE_WIDTH-1:0] cacheSet_data;
+    logic [CACHE_DATA_WIDTH-1:0] data0, data1, data2;
 
     CacheSet #(
-        .DATA_WIDTH     ($size(Inst)),
-        .ADDR_WIDTH     ($size(InstAddr)),
-        .CACHE_ELEMENTS (CACHE_ELEMENTS))
+        .DATA_WIDTH  (CACHE_DATALINE_WIDTH),
+        .TAG_WIDTH   ($size(Tag)),
+        .INDEX_WIDTH ($size(Index)))
     cacheSet (
         .i_clock (i_clock),
         .i_reset (i_reset),
-        .i_addr  (addr),
-        .i_wr    (wr),
-        .i_cl    (cl),
-        .i_data  (i_mem_data),
+        .i_index (cacheCtrl_index),
+        .i_wr    (cacheCtrl_wr & (cacheCtrl_block == 2'b11)),
+        .i_cl    (cacheCtrl_cl),
+        .i_tag   (tag),
+        .i_data  ({i_mem_data, data2, data1, data0}),
         .o_data  (cacheSet_data),
         .o_hit   (cacheSet_hit));
 
-
-    // -------------------------------------------------------------------
-    // FSM de control de les operacions del cache
-    // -------------------------------------------------------------------
-
-    always_comb begin
-
-        cl = 1'b0;
-        wr = 1'b0;
-        addr = i_addr;
-        nextInitCount = 0;
-        nextAllocCount = 0;
-        nextAllocAddr = {i_addr[$size(InstAddr)-1:2], 2'b00};
-        nextState = state;
-
-        unique case (state)
-            State_INIT:
-                begin
-                    cl            = 1'b1;
-                    addr          = InstAddr'({initCount, 2'b00});
-                    nextInitCount = initCount + 1;
-                    nextState     = (initCount == CACHE_ELEMENTS-1) ? State_IDLE : state;
-                end
-
-            State_IDLE:
-                nextState = cacheSet_hit ? state : State_ALLOC;
-
-            State_ALLOC:
-                begin
-                    wr             = 1'b1;
-                    addr           = allocAddr;
-                    o_mem_addr     = allocAddr;
-                    nextAllocCount = allocCount + 1;
-                    nextAllocAddr  = allocAddr + 1;
-                    nextState      = (allocCount == CACHE_BLOCKS-1) ? State_IDLE : state;
-                end
-
-            default: ;
-        endcase
-    end
-
-    // Asignacioo de les sortides
-    //
-    assign o_busy = cacheSet_hit & (state == State_IDLE);
-    assign o_inst = cacheSet_data;
-
-    // Actualitzacio dels contadors
+    // Registre les lectures parcials dels blocs
     //
     always_ff @(posedge i_clock)
-        if (i_reset) begin
-            initCount <= 0;
-            allocCount <= 0;
-            allocAddr <= 0;
-        end
-        else begin
-            initCount <= nextInitCount;
-            allocCount <= nextAllocCount;
-            allocAddr <= nextAllocAddr;
-        end
+        if (cacheCtrl_wr)
+            unique case (cacheCtrl_block)
+                2'b00: data0 <= i_mem_data;
+                2'b01: data1 <= i_mem_data;
+                2'b10: data2 <= i_mem_data;
+                2'b11: ;
+            endcase
 
-    // Actualitzacio del estat
-    //
-    always_ff @(posedge i_clock)
-        if (i_reset)
-            state <= State_INIT;
-        else
-            state <= nextState;
+
+    // -------------------------------------------------------------------
+    // Evalua el bloc per lleigir
+    // -------------------------------------------------------------------
+
+    Mux4To1 #(
+        .WIDTH ($size(Inst)))
+    mux (
+        .i_select (cacheCtrl_block),
+        .i_input0 (cacheSet_data[31:0]),
+        .i_input1 (cacheSet_data[63:32]),
+        .i_input2 (cacheSet_data[95:64]),
+        .i_input3 (cacheSet_data[127:96]),
+        .o_output (o_inst));
+
 
 endmodule
