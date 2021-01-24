@@ -11,8 +11,8 @@
 //            i_clock   : Senyal de rellotge
 //            i_reset   : Senyal de reset
 //            i_index   : Adressa
-//            i_write   : Habilita l'excriptura
-//            l_clear   : Habilita la neteja
+//            i_wr      : Habilita l'excriptura
+//            l_cl      : Habilita la neteja
 //            i_tag     : Tag
 //            i_data    : Dades
 //
@@ -25,14 +25,14 @@
 module CacheSet
 #(
     parameter DATA_WIDTH  = 32, // Amplada de dades en bits
-    parameter TAG_WIDTH   = 10, // Amplada del tag en bits
-    parameter INDEX_WIDTH = 6)  // AMplada del index en bits
+    parameter TAG_WIDTH   = 3,  // Amplada del tag en bits
+    parameter INDEX_WIDTH = 5)  // Amplada del index en bits
 (
     input  logic                   i_clock, // Clock
     input  logic                   i_reset, // Reset
-    input  logic [INDEX_WIDTH-1:0] i_index, // Index
     input  logic                   i_wr,    // Habilita escriptura
     input  logic                   i_cl,    // Habilita invalidacio
+    input  logic [INDEX_WIDTH-1:0] i_index, // Index
     input  logic [TAG_WIDTH-1:0]   i_tag,   // Tag
     input  logic [DATA_WIDTH-1:0]  i_data,  // Dades
     output logic [DATA_WIDTH-1:0]  o_data,  // Dades

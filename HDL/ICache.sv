@@ -43,10 +43,10 @@ module ICache
 
     // Asignacio de les sortides
     //
-    assign o_mem_addr = {2'b00, tag, cacheCtrl_index, cacheCtrl_block}; // Adressa de memoria en words
+    assign o_mem_addr = {2'b00, cacheCtrl_tag, cacheCtrl_index, cacheCtrl_block}; // Adressa de memoria en words
     assign o_busy = cacheCtrl_busy;
     assign o_hit  = cacheCtrl_hit & i_rd;
-    
+
 
     // -------------------------------------------------------------------
     // Cache controller
@@ -56,18 +56,23 @@ module ICache
     logic cacheCtrl_wr;
     logic cacheCtrl_hit;
     logic cacheCtrl_busy;
-    Block cacheCtrl_block;
+    Tag   cacheCtrl_tag;
     Index cacheCtrl_index;
+    Block cacheCtrl_block;
 
     CacheController #(
+        .TAG_WIDTH   ($size(Tag)),
         .INDEX_WIDTH ($size(Index)),
         .BLOCK_WIDTH ($size(Block)))
     cacheCtrl (
         .i_clock (i_clock),
         .i_reset (i_reset),
+        .i_tag   (tag),
         .i_index (index),
+        .i_block (block),
         .i_hit   (cacheSet_hit),
         .i_rd    (i_rd),
+        .o_tag   (cacheCtrl_tag),
         .o_index (cacheCtrl_index),
         .o_block (cacheCtrl_block),
         .o_cl    (cacheCtrl_cl),
@@ -91,10 +96,10 @@ module ICache
     cacheSet (
         .i_clock (i_clock),
         .i_reset (i_reset),
-        .i_index (cacheCtrl_index),
         .i_wr    (cacheCtrl_wr & (cacheCtrl_block == 2'b11)),
         .i_cl    (cacheCtrl_cl),
-        .i_tag   (tag),
+        .i_tag   (cacheCtrl_tag),
+        .i_index (cacheCtrl_index),
         .i_data  ({i_mem_data, data2, data1, data0}),
         .o_data  (cacheSet_data),
         .o_hit   (cacheSet_hit));

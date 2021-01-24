@@ -71,6 +71,31 @@ module top
             addr = InstAddr'(12'h012);
             read = 1'b1;
         end
+
+        if (tickCount == 70) begin
+            addr = InstAddr'(12'h017);
+            read = 1'b1;
+        end
+
+        if (tickCount == 80) begin
+            addr = InstAddr'(12'h011);
+            read = 1'b1;
+        end
+
+        if (tickCount == 90) begin
+            addr = InstAddr'(12'hF11);
+            read = 1'b1;
+        end
+
+        if (tickCount == 100) begin
+            addr = InstAddr'(12'h011);
+            read = 1'b1;
+        end
+
+        if (tickCount == 110) begin
+            addr = InstAddr'(12'hF10);
+            read = 1'b1;
+        end
     end
 
     always_ff @(posedge i_clock)
